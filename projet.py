@@ -1,5 +1,6 @@
 import sys
 import random
+import copy
 from math import gcd
 
 def LCM(numbers):
@@ -22,7 +23,19 @@ def readFile(filename):
 		newSystemList.append(systemList[i].replace(" ", "").strip("\n").split(";"))
 	return newSystemList
 
-def printFeasibilityInterval(newSystemList):
+def getOffsetWCETPeriodLists(systemList):
+	offsetList = []
+	wcetList = []
+	periodList = []
+
+	for i in range(len(systemList)):
+		offsetList.append(int(systemList[i][0]))
+		wcetList.append(int(systemList[i][1]))
+		periodList.append(int(systemList[i][2]))
+
+	return offsetList, wcetList, periodList 
+
+def computeFeasibilityInterval(newSystemList):
 	"""
 	Printing the feasibility interval of a list of offset, WCET and periods values
 	from a system.txt file
@@ -43,8 +56,11 @@ def printFeasibilityInterval(newSystemList):
 		offsetList[i] = [int(i) for i in offsetList[i]]
 
 	feasibilityIntervalUpperBound = max(offsetList[0]) + (2*LCM(periodList[0]))
-	print("feasibility interval: 0 ," ,feasibilityIntervalUpperBound)
 
+	return feasibilityIntervalUpperBound
+
+def printFeasibilityInterval(feasibilityIntervalUpperBound):
+	print("feasibility interval: 0 ," ,feasibilityIntervalUpperBound)
 
 def matchRequiredUtilisationProcent(wcets, periods, procent, delta):
 	"""
@@ -85,12 +101,96 @@ def systemFileGenerator(offsets, wcets, periods):
 	for i in range(0, len(offsets)):
 		file.write(str(offsets[i]) + "; " + str(wcets[i]) + "; " + str(periods[i]) + "\n")
 	file.close
+
+def getMultiplesOf(number, limit, offset):
+	multiples = []
+	count = 1
+	multiple = count * int(number) + int(offset) 
+	while(multiple <= limit):
+		multiples.append(multiple)
+		count += 1
+		multiple = count * int(number) + int(offset) 
+
+	return multiples 
+
+def getTasksDeadlines(systemList, upperBound, offsets):
+
+	tasksDeadlines = {}
+	for i in range(len(systemList)):
+		tasksDeadlines[i] = getMultiplesOf(systemList[i][2], upperBound, offsets[i])
+
+	return tasksDeadlines
+
+def getSmallestDeadlines(tasksDeadlinesDict):
+
+	minVal = 9999
+	i = 0
+	index = 0 
+	for listDeadlines in tasksDeadlinesDict.values():
+		if (listDeadlines[0] < minVal):
+			minVal = listDeadlines[0]
+			index = i
+		i += 1
+
+	return index,minVal
+
+def initJobsList(systemList):
+	jobs = []
+	for i in range(len(systemList)):
+		jobs.append(0)
+	return jobs
+
+
+def isSchedulable(systemList, end):
+	return end <= computeFeasibilityInterval(systemList)
+
+# ATTENTION : gérer si même deadline 
+def EDF(system, begin, end):
+	systemList = readFile(system)
+	jobs = initJobsList(systemList)
+
+	offsetList = getOffsetWCETPeriodLists(systemList)[0]
+	wcetList = getOffsetWCETPeriodLists(systemList)[1]
+	periodList = getOffsetWCETPeriodLists(systemList)[2]
+
+	tasksDeadlinesDict = getTasksDeadlines(systemList, end, offsetList)
+	tasksExecuted = []
+
+	if(isSchedulable):
+		print("Schedule from", begin, "to", end, ";", len(systemList), "tasks")
+		t = 0
+		wcets = copy.deepcopy(wcetList)
+		while(t <= end):
+			taskNumber, smallest = getSmallestDeadlines(tasksDeadlinesDict)
+			tasksExecuted.append(taskNumber)
+			wcets[taskNumber] -= 1 
+
+			for deadlineList in tasksDeadlinesDict.values():
+				for deadline in deadlineList: 
+					if(t == deadline):
+						print(t, " : Arrival of job T{}J{}".format(list(tasksDeadlinesDict.keys())[list(tasksDeadlinesDict.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
+
+			if(wcets[taskNumber] == 0):
+				jobs[taskNumber] += 1
+				wcets[taskNumber] = wcetList[taskNumber]
+				tasksDeadlinesDict[taskNumber] = tasksDeadlinesDict[taskNumber][1:] 
+
+			#print("{}-{} : T{}J{}".format(t,t+int(wcetList[taskNumber]),taskNumber,jobs[taskNumber]))
+
+			t += 1
+			print(tasksExecuted)
+
+
 	
-
-
 def main(filename):
 	newSystemList = readFile(filename)
+	print(newSystemList)
+	offsets, wcets, periods = getOffsetWCETPeriodLists(newSystemList)
+	print("ALO",wcets)
+
+	print(getTasksDeadlines(newSystemList,20,[0,0,1]))
 	
+	print("\n")
 	# Testing feasibility interval print
 	print("# QUESTION 1")
 	printFeasibilityInterval(newSystemList)
@@ -103,5 +203,8 @@ def main(filename):
 	offsets, wcets, periods = generateTasks(numberOfTasks, requiredUtilisationProcent, delta)
 	systemFileGenerator(offsets, wcets, periods)
 
+	print("\n")
+	EDF(filename, 0, 20)
 
-main(sys.argv[1])
+if __name__ == "__main__":
+	main(sys.argv[1])
