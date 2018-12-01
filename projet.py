@@ -121,18 +121,26 @@ def getTasksDeadlines(systemList, upperBound, offsets):
 
 	return tasksDeadlines
 
-def getSmallestDeadlines(tasksDeadlinesDict):
+def getSmallestDeadlines(tasksDeadlinesDict, isJobDoneUntilNextDeadline):
 
 	minVal = 9999
 	i = 0
 	current = 0 
 	for listDeadlines in tasksDeadlinesDict.values():
-		if (listDeadlines[0] < minVal):
-			minVal = listDeadlines[0]
-			current = i
+		if len(listDeadlines) != 0:
+			if (listDeadlines[0] < minVal and not isJobDoneUntilNextDeadline[i]):
+				minVal = listDeadlines[0]
+				current = i
 		i += 1
 
 	return current,minVal
+
+def isDeadlineMissed(deadline, t):
+	"""
+	Check whether the deadline is missed or not
+	"""
+	return deadline <= t
+
 
 def initJobsList(systemList):
 	jobs = []
@@ -149,33 +157,37 @@ def initIsJobDoneDict(systemList):
 def isSchedulable(systemList, end):
 	return end <= computeFeasibilityInterval(systemList)
 
-# ATTENTION : gérer si même deadline 
 def EDF(system, begin, end):
 	systemList = readFile(system)
 	jobs = initJobsList(systemList)
 
-	offsetList = getOffsetWCETPeriodLists(systemList)[0]
-	wcetList = getOffsetWCETPeriodLists(systemList)[1]
-	periodList = getOffsetWCETPeriodLists(systemList)[2]
+	offsetList, wcetList, periodList = getOffsetWCETPeriodLists(systemList)
 
-	tasksDeadlinesDict = getTasksDeadlines(systemList, end, offsetList)
-	temporaryTaskDeadLinesDict = copy.deepcopy(tasksDeadlinesDict) # useful to keep in memory the deadlines 
+	tasksDeadlinesDict = getTasksDeadlines(systemList, computeFeasibilityInterval(systemList), offsetList)
 	tasksExecuted = []
 	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
+	arrivalJob = copy.deepcopy(tasksDeadlinesDict)
+	arrivalJobOutput = []
 
 	if(isSchedulable):
-		print("Schedule from", begin, "to", end, ";", len(systemList), "tasks")
 		t = 0
 		wcets = copy.deepcopy(wcetList)
+		
 		while(t <= end):
-			currentExecutedTask, smallest = getSmallestDeadlines(tasksDeadlinesDict)
-			tasksExecuted.append(currentExecutedTask)
-			wcets[currentExecutedTask] -= 1 
 
-			for deadlineList in tasksDeadlinesDict.values():
+			for deadlineList in arrivalJob.values():
 				for deadline in deadlineList: 
 					if(t == deadline):
-						print(t, " : Arrival of job T{}J{}".format(list(tasksDeadlinesDict.keys())[list(tasksDeadlinesDict.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
+						isJobDoneUntilNextDeadline[list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)]] = False
+						arrivalJobOutput.append("{}:T{}J{}".format(t, list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
+
+			currentExecutedTask, smallest = getSmallestDeadlines(tasksDeadlinesDict, isJobDoneUntilNextDeadline)
+			if isDeadlineMissed(smallest, t):
+				tasksExecuted.append("Missed")
+				break
+
+			tasksExecuted.append((currentExecutedTask, jobs[currentExecutedTask]))
+			wcets[currentExecutedTask] -= 1 
 
 			# if job done  
 			if(wcets[currentExecutedTask] == 0):
@@ -184,16 +196,45 @@ def EDF(system, begin, end):
 				wcets[currentExecutedTask] = wcetList[currentExecutedTask]
 				tasksDeadlinesDict[currentExecutedTask] = tasksDeadlinesDict[currentExecutedTask][1:] 
 
-			# delete deadline if we arrived to it 
-			if(t == temporaryTaskDeadLinesDict[currentExecutedTask][0]):
-				temporaryTaskDeadLinesDict[currentExecutedTask][1:] 
-
-			
-			#print("{}-{} : T{}J{}".format(t,t+int(wcetList[taskNumber]),taskNumber,jobs[taskNumber]))
-
 			t += 1
-			print(tasksExecuted)
 
+		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList)
+
+def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList):
+	"""
+	Print the schedule of the system when the schedule is over
+	"""
+	print("Schedule from", begin, "to", end, ";", len(systemList), "tasks")
+	i=0
+	while(i < len(tasksExecuted)-1):
+		interval = getTaskInterval(tasksExecuted, tasksExecuted[i][0], i)
+		if(i >= begin):
+			print("{}-{} : T{}J{}".format(i, i+interval, tasksExecuted[i][0], tasksExecuted[i][1]))
+		for j in range(i+1, i+interval+1):
+			for elem in arrivalJobOutput:
+				if int(elem.split(":")[0]) == j:
+					print("{} : Arrival of job {}".format(j, elem.split(":")[1]))
+		i+=interval
+		if (tasksExecuted[i] == "Missed"):
+			print("{}: Job T{}J{} misses a deadline".format(i, tasksExecuted[-2][0], tasksExecuted[-2][1]))
+			print("END: 1 preemptions")
+			break
+
+
+
+def getTaskInterval(tasksExecuted, task, index):
+	"""
+	Give the interval during which the task has been executed in a row
+	"""
+	interval = 1
+	index += 1
+	while(tasksExecuted[index][0] == task):
+		interval += 1
+		index += 1
+		if index == (len(tasksExecuted) - 1):
+			break
+
+	return interval
 
 def main(filename):
 	newSystemList = readFile(filename)
@@ -201,7 +242,7 @@ def main(filename):
 	offsets, wcets, periods = getOffsetWCETPeriodLists(newSystemList)
 	print("ALO",wcets)
 
-	print(getTasksDeadlines(newSystemList,20,[0,0,1]))
+	print(getTasksDeadlines(newSystemList,25,[0,0,1]))
 	
 	# Testing feasibility interval print
 	print("\n")
@@ -218,7 +259,7 @@ def main(filename):
 
 	# Testing tasks generator 
 	print("\n# QUESTION 3")
-	EDF(filename, 0, 20)
+	EDF(filename, 4, 25)
 
 if __name__ == "__main__":
 	main(sys.argv[1])
