@@ -140,6 +140,11 @@ def initJobsList(systemList):
 		jobs.append(0)
 	return jobs
 
+def initIsJobDoneDict(systemList):
+	isJobDoneUntilNextDeadline = {}
+	for i in range(len(systemList)):
+		isJobDoneUntilNextDeadline[i] = False 
+	return isJobDoneUntilNextDeadline
 
 def isSchedulable(systemList, end):
 	return end <= computeFeasibilityInterval(systemList)
@@ -154,7 +159,9 @@ def EDF(system, begin, end):
 	periodList = getOffsetWCETPeriodLists(systemList)[2]
 
 	tasksDeadlinesDict = getTasksDeadlines(systemList, end, offsetList)
+	temporaryTaskDeadLinesDict = copy.deepcopy(tasksDeadlinesDict)
 	tasksExecuted = []
+	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList)
 
 	if(isSchedulable):
 		print("Schedule from", begin, "to", end, ";", len(systemList), "tasks")
@@ -162,6 +169,8 @@ def EDF(system, begin, end):
 		wcets = copy.deepcopy(wcetList)
 		while(t <= end):
 			taskNumber, smallest = getSmallestDeadlines(tasksDeadlinesDict)
+			if (False in isJobDoneUntilNextDeadline.values()):
+
 			tasksExecuted.append(taskNumber)
 			wcets[taskNumber] -= 1 
 
@@ -171,10 +180,11 @@ def EDF(system, begin, end):
 						print(t, " : Arrival of job T{}J{}".format(list(tasksDeadlinesDict.keys())[list(tasksDeadlinesDict.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
 
 			if(wcets[taskNumber] == 0):
+				isJobDoneUntilNextDeadline[taskNumber] = True
 				jobs[taskNumber] += 1
 				wcets[taskNumber] = wcetList[taskNumber]
 				tasksDeadlinesDict[taskNumber] = tasksDeadlinesDict[taskNumber][1:] 
-
+			
 			#print("{}-{} : T{}J{}".format(t,t+int(wcetList[taskNumber]),taskNumber,jobs[taskNumber]))
 
 			t += 1
