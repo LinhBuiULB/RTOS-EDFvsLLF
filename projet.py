@@ -210,6 +210,7 @@ def LLF(system, begin, end):
 	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
 	arrivalJob = copy.deepcopy(tasksDeadlinesDict)
 	arrivalJobOutput = []
+	preemptionsNb = 0
 
 	laxityOfJobs = []
 	CPUTimeUsed = [0 for i in range(len(jobs))]
@@ -231,6 +232,12 @@ def LLF(system, begin, end):
 			print("Laxities are {}".format(laxityOfJobs))
 
 			currentExecutedTask = laxityOfJobs.index(min(laxityOfJobs))
+
+			if (t != 0):
+				if tasksExecuted[t-1][0] != currentExecutedTask:
+					if not isJobDoneUntilNextDeadline[tasksExecuted[t-1][0]]:
+						preemptionsNb += 1 
+
 			CPUTimeUsed[currentExecutedTask] += 1
 			wcets[currentExecutedTask] -= 1 
 			tasksExecuted.append((currentExecutedTask, jobs[currentExecutedTask]))
@@ -239,7 +246,6 @@ def LLF(system, begin, end):
 				print("Missed")
 				tasksExecuted.append("Missed")
 				break
-
 
 			if(wcets[currentExecutedTask] == 0):
 				isJobDoneUntilNextDeadline[currentExecutedTask] = True
@@ -252,7 +258,7 @@ def LLF(system, begin, end):
 
 			t += 1
 
-		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList)
+		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
 
 
 def EDF(system, begin, end):
@@ -269,6 +275,7 @@ def EDF(system, begin, end):
 	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
 	arrivalJob = copy.deepcopy(tasksDeadlinesDict)
 	arrivalJobOutput = []
+	preemptionsNb = 0
 
 	if(isSchedulable):
 		t = 0
@@ -291,6 +298,12 @@ def EDF(system, begin, end):
 			tasksExecuted.append((currentExecutedTask, jobs[currentExecutedTask]))
 			wcets[currentExecutedTask] -= 1 
 
+			# Compute preemption number
+			if (t != 0):
+				if tasksExecuted[t-1][0] != currentExecutedTask:
+					if not isJobDoneUntilNextDeadline[tasksExecuted[t-1][0]]:
+						preemptionsNb += 1 
+
 			# if job done  
 			if(wcets[currentExecutedTask] == 0):
 				isJobDoneUntilNextDeadline[currentExecutedTask] = True
@@ -300,9 +313,9 @@ def EDF(system, begin, end):
 
 			t += 1
 
-		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList)
+		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
 
-def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList):
+def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb):
 	"""
 	Print the schedule of the system when the schedule is over
 	"""
@@ -319,9 +332,8 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList):
 		i+=interval
 		if (tasksExecuted[i] == "Missed"):
 			print("{}: Job T{}J{} misses a deadline".format(i, tasksExecuted[-2][0], tasksExecuted[-2][1]))
-			print("END: 1 preemptions")
+			print("END: {} preemptions".format(preemptionsNb))
 			break
-
 
 
 def getTaskInterval(tasksExecuted, task, index):
@@ -342,7 +354,6 @@ def main(filename):
 	newSystemList = readFile(filename)
 	print(newSystemList)
 	offsets, wcets, periods = getOffsetWCETPeriodLists(newSystemList)
-	print("ALO",wcets)
 
 	print(getTasksDeadlines(newSystemList,25,[0,0,1]))
 	
@@ -361,7 +372,7 @@ def main(filename):
 
 	# Testing tasks generator 
 	print("\n# QUESTION 3")
-	#EDF(filename, 4, 25)
+	EDF(filename, 4, 25)
 	LLF(filename, 0, 20)
 
 if __name__ == "__main__":
