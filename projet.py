@@ -3,6 +3,8 @@ import random
 import copy
 from math import gcd
 
+UPPER_BOUND_VALUE = 9999999999
+
 def LCM(numbers):
 	"""
 	Computing least common multiple
@@ -157,7 +159,82 @@ def initIsJobDoneDict(systemList):
 def isSchedulable(systemList, end):
 	return end <= computeFeasibilityInterval(systemList)
 
+
+def computeLaxities(time, d, e, a, isJobDoneUntilNextDeadline, CPUTimeUsed, jobs):
+	"""
+	Compute the laxity of all jobs
+	"""
+	newLaxities = [0 for i in range(len(isJobDoneUntilNextDeadline))]
+	for i in range (len(isJobDoneUntilNextDeadline)):
+		if isJobDoneUntilNextDeadline[i]:
+			newLaxities[i] = UPPER_BOUND_VALUE
+		else:
+			newLaxities[i] = ((jobs[i]+1)*d[i]+a[i]) - time - (e[i] - CPUTimeUsed[i])
+
+	return newLaxities
+
+
+def LLF(system, begin, end):
+	"""
+	LLF schedule
+	"""
+	systemList = readFile(system)
+	jobs = initJobsList(systemList)
+	offsetList, wcetList, periodList = getOffsetWCETPeriodLists(systemList)
+	tasksDeadlinesDict = getTasksDeadlines(systemList, computeFeasibilityInterval(systemList), offsetList)
+	tasksExecuted = []
+	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
+	arrivalJob = copy.deepcopy(tasksDeadlinesDict)
+	arrivalJobOutput = []
+
+	laxityOfJobs = []
+	CPUTimeUsed = [0 for i in range(len(jobs))]
+
+	if(isSchedulable):
+		t = 0
+		wcets = copy.deepcopy(wcetList)
+
+		while(t <= end):
+
+			for deadlineList in arrivalJob.values():
+				for deadline in deadlineList: 
+					if(t == deadline):
+						isJobDoneUntilNextDeadline[list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)]] = False
+						arrivalJobOutput.append("{}:T{}J{}".format(t, list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
+
+
+			laxityOfJobs = computeLaxities(t, periodList, wcetList, offsetList, isJobDoneUntilNextDeadline, CPUTimeUsed, jobs)
+			print("Laxities are {}".format(laxityOfJobs))
+
+			currentExecutedTask = laxityOfJobs.index(min(laxityOfJobs))
+			CPUTimeUsed[currentExecutedTask] += 1
+			wcets[currentExecutedTask] -= 1 
+			tasksExecuted.append((currentExecutedTask, jobs[currentExecutedTask]))
+
+			if(min(laxityOfJobs) < 0):
+				print("Missed")
+				tasksExecuted.append("Missed")
+				break
+
+
+			if(wcets[currentExecutedTask] == 0):
+				isJobDoneUntilNextDeadline[currentExecutedTask] = True
+				jobs[currentExecutedTask] += 1
+				wcets[currentExecutedTask] = wcetList[currentExecutedTask]
+				tasksDeadlinesDict[currentExecutedTask] = tasksDeadlinesDict[currentExecutedTask][1:] 
+				CPUTimeUsed[currentExecutedTask] = 0
+
+			print("Task executed are {} at time {} \n".format(tasksExecuted, t))
+
+			t += 1
+
+		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList)
+
+
 def EDF(system, begin, end):
+	"""
+	EDF schedule
+	"""
 	systemList = readFile(system)
 	jobs = initJobsList(systemList)
 
@@ -172,7 +249,7 @@ def EDF(system, begin, end):
 	if(isSchedulable):
 		t = 0
 		wcets = copy.deepcopy(wcetList)
-		
+
 		while(t <= end):
 
 			for deadlineList in arrivalJob.values():
@@ -182,6 +259,7 @@ def EDF(system, begin, end):
 						arrivalJobOutput.append("{}:T{}J{}".format(t, list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
 
 			currentExecutedTask, smallest = getSmallestDeadlines(tasksDeadlinesDict, isJobDoneUntilNextDeadline)
+
 			if isDeadlineMissed(smallest, t):
 				tasksExecuted.append("Missed")
 				break
@@ -259,7 +337,8 @@ def main(filename):
 
 	# Testing tasks generator 
 	print("\n# QUESTION 3")
-	EDF(filename, 4, 25)
+	#EDF(filename, 4, 25)
+	LLF(filename, 0, 20)
 
 if __name__ == "__main__":
 	main(sys.argv[1])
