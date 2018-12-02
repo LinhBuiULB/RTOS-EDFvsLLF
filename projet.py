@@ -3,7 +3,7 @@ import random
 import copy
 from math import gcd
 
-UPPER_BOUND_VALUE = 9999999999
+UPPER_BOUND_VALUE = 9999
 
 def LCM(numbers):
 	"""
@@ -26,6 +26,9 @@ def readFile(filename):
 	return newSystemList
 
 def getOffsetWCETPeriodLists(systemList):
+	"""
+	Get offset, WCET and period lists of all tasks 
+	"""
 	offsetList = []
 	wcetList = []
 	periodList = []
@@ -62,11 +65,14 @@ def computeFeasibilityInterval(newSystemList):
 	return feasibilityIntervalUpperBound
 
 def printFeasibilityInterval(feasibilityIntervalUpperBound):
+	"""
+	Print the feasibility interval (question 1)
+	"""
 	print("feasibility interval: 0 ," ,feasibilityIntervalUpperBound)
 
 def matchRequiredUtilisationProcent(wcets, periods, procent, delta):
 	"""
-	Check wether or not we have our required utilisation procent with the values generated randomly
+	Check whether or not we have our required utilisation procent with the values generated randomly
 	"""
 	result = 0
 	for i in range (0, len(wcets)):
@@ -76,9 +82,10 @@ def matchRequiredUtilisationProcent(wcets, periods, procent, delta):
 		return True
 	return False
 
-
 def generateTasks(numberOfTasks, requiredUtilisationProcent, delta):
-
+	"""
+	Generator of tasks 
+	"""
 	offsets = []
 	for i in range(0, numberOfTasks):
 		offsets.append(random.randint(0,2))
@@ -98,13 +105,18 @@ def generateTasks(numberOfTasks, requiredUtilisationProcent, delta):
 
 
 def systemFileGenerator(offsets, wcets, periods):
-	
+	"""
+	Generator tasks in a file (question 2)
+	"""
 	file = open("tasks.txt", "w")
 	for i in range(0, len(offsets)):
 		file.write(str(offsets[i]) + "; " + str(wcets[i]) + "; " + str(periods[i]) + "\n")
 	file.close
 
 def getMultiplesOf(number, limit, offset):
+	"""
+	Get all multiples of a number to get all deadlines of a task until the limit (feasibility interval)
+	"""
 	multiples = []
 	count = 1
 	multiple = count * int(number) + int(offset) 
@@ -116,7 +128,9 @@ def getMultiplesOf(number, limit, offset):
 	return multiples 
 
 def getTasksDeadlines(systemList, upperBound, offsets):
-
+	"""
+	Get all the deadlines for the tasks 
+	"""
 	tasksDeadlines = {}
 	for i in range(len(systemList)):
 		tasksDeadlines[i] = getMultiplesOf(systemList[i][2], upperBound, offsets[i])
@@ -124,8 +138,10 @@ def getTasksDeadlines(systemList, upperBound, offsets):
 	return tasksDeadlines
 
 def getSmallestDeadlines(tasksDeadlinesDict, isJobDoneUntilNextDeadline):
-
-	minVal = 9999
+	"""
+	Get the smallest deadline and the corresponding task to know which one we have to execute currently 
+	"""
+	minVal = UPPER_BOUND_VALUE
 	i = 0
 	current = 0 
 	for listDeadlines in tasksDeadlinesDict.values():
@@ -145,22 +161,30 @@ def isDeadlineMissed(deadline, t):
 
 
 def initJobsList(systemList):
+	"""
+	Initialize the list of jobs's tasks to 0 
+	"""
 	jobs = []
 	for i in range(len(systemList)):
 		jobs.append(0)
 	return jobs
 
 def initIsJobDoneDict(systemList):
+	"""
+	Initialize the dictionary that tells wheter or not the job is done until the next arrival of job
+	"""
 	isJobDoneUntilNextDeadline = {}
 	for i in range(len(systemList)):
 		isJobDoneUntilNextDeadline[i] = False 
 	return isJobDoneUntilNextDeadline
 
 def isSchedulable(systemList, end):
+	"""
+	Check if the system is schedulable
+	"""
 	return end <= computeFeasibilityInterval(systemList)
 
-
-def computeLaxities(time, d, e, a, isJobDoneUntilNextDeadline, CPUTimeUsed, jobs):
+def computeLaxities(time, tasksDeadlines, e, isJobDoneUntilNextDeadline, CPUTimeUsed):
 	"""
 	Compute the laxity of all jobs
 	"""
@@ -169,7 +193,7 @@ def computeLaxities(time, d, e, a, isJobDoneUntilNextDeadline, CPUTimeUsed, jobs
 		if isJobDoneUntilNextDeadline[i]:
 			newLaxities[i] = UPPER_BOUND_VALUE
 		else:
-			newLaxities[i] = ((jobs[i]+1)*d[i]+a[i]) - time - (e[i] - CPUTimeUsed[i])
+			newLaxities[i] = tasksDeadlines[i][0] - time - (e[i] - CPUTimeUsed[i])
 
 	return newLaxities
 
@@ -203,7 +227,7 @@ def LLF(system, begin, end):
 						arrivalJobOutput.append("{}:T{}J{}".format(t, list(arrivalJob.keys())[list(arrivalJob.values()).index(deadlineList)] , deadlineList.index(deadline) + 1 ))
 
 
-			laxityOfJobs = computeLaxities(t, periodList, wcetList, offsetList, isJobDoneUntilNextDeadline, CPUTimeUsed, jobs)
+			laxityOfJobs = computeLaxities(t, tasksDeadlinesDict, wcetList, isJobDoneUntilNextDeadline, CPUTimeUsed)
 			print("Laxities are {}".format(laxityOfJobs))
 
 			currentExecutedTask = laxityOfJobs.index(min(laxityOfJobs))
@@ -272,7 +296,7 @@ def EDF(system, begin, end):
 				isJobDoneUntilNextDeadline[currentExecutedTask] = True
 				jobs[currentExecutedTask] += 1
 				wcets[currentExecutedTask] = wcetList[currentExecutedTask]
-				tasksDeadlinesDict[currentExecutedTask] = tasksDeadlinesDict[currentExecutedTask][1:] 
+				tasksDeadlinesDict[currentExecutedTask] = tasksDeadlinesDict[currentExecutedTask][1:]
 
 			t += 1
 
