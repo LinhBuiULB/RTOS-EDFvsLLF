@@ -350,7 +350,7 @@ def getTaskInterval(tasksExecuted, task, index):
 
 	return interval
 
-def main(filename):
+def main(filename, scheduler, start, end):
 	newSystemList = readFile(filename)
 	print(newSystemList)
 	offsets, wcets, periods = getOffsetWCETPeriodLists(newSystemList)
@@ -372,8 +372,20 @@ def main(filename):
 
 	# Testing tasks generator 
 	print("\n# QUESTION 3")
-	EDF(filename, 4, 25)
-	LLF(filename, 0, 20)
+	if(scheduler == "edf"):
+		EDF(filename, start, end)
+	else:
+		LLF(filename, start, end)
 
 if __name__ == "__main__":
-	main(sys.argv[1])
+	try:
+		if(len(sys.argv) == 5):
+			filename = sys.argv[1]
+			scheduler = sys.argv[2]
+			start = int(sys.argv[3])
+			end = int(sys.argv[4])
+			main(filename, scheduler, start, end)
+		else:
+			print("Error: please put the right number of parameters")
+	except:
+		print("Error: please put the right parameters")
