@@ -2,6 +2,9 @@ import sys
 import random
 import copy
 from math import gcd
+import matplotlib.pyplot as plt
+import numpy as np
+import string
 
 UPPER_BOUND_VALUE = 9999
 
@@ -259,6 +262,7 @@ def LLF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
+		printGraph(tasksExecuted)
 
 
 def EDF(system, begin, end):
@@ -314,6 +318,7 @@ def EDF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
+		printGraph(tasksExecuted)
 
 def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb):
 	"""
@@ -335,6 +340,22 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemp
 			print("END: {} preemptions".format(preemptionsNb))
 			break
 
+def printGraph(tasksExecuted):
+	x = []
+	y = []
+
+	for i in range(len(tasksExecuted)):
+		if(tasksExecuted[i] != "Missed"):
+			y.append(tasksExecuted[i][0])
+			x.append(i)
+
+	y = np.array(y)
+	x = np.array(x)		
+	labels = [0,1,2]    
+	plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1)
+	plt.ylim(max(y)+0.5, min(y)-0.5)
+	plt.yticks(np.arange(y.max()+1), labels)
+	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
 	"""
@@ -378,14 +399,11 @@ def main(filename, scheduler, start, end):
 		LLF(filename, start, end)
 
 if __name__ == "__main__":
-	try:
-		if(len(sys.argv) == 5):
-			filename = sys.argv[1]
-			scheduler = sys.argv[2]
-			start = int(sys.argv[3])
-			end = int(sys.argv[4])
-			main(filename, scheduler, start, end)
-		else:
-			print("Error: please put the right number of parameters")
-	except:
-		print("Error: please put the right parameters")
+
+	if(len(sys.argv) == 5):
+		filename = sys.argv[1]
+		scheduler = sys.argv[2]
+		start = int(sys.argv[3])
+		end = int(sys.argv[4])
+		main(filename, scheduler, start, end)
+	
