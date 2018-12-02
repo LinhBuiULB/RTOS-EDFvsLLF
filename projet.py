@@ -351,10 +351,25 @@ def printGraph(tasksExecuted):
 
 	y = np.array(y)
 	x = np.array(x)		
-	labels = [0,1,2]    
+
+	ylabels = []
+	xlabels = [] 
+
+	countX = 0 
+	for j in range(len(x)):
+		xlabels.append(countX)
+		countX += 1 
+
+	countY = 0 
+	for i in range(len(x)):
+		ylabels.append(countY)
+		countY += 1
+
 	plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1)
 	plt.ylim(max(y)+0.5, min(y)-0.5)
-	plt.yticks(np.arange(y.max()+1), labels)
+	plt.xlim(min(x), max(x))
+	plt.yticks(np.arange(y.max()+1), ylabels)
+	plt.xticks(np.arange(x.max()+1), xlabels)
 	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
