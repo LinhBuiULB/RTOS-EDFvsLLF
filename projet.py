@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import string
 import pylab as P
+import matplotlib.patches as mpatches
+from matplotlib.legend_handler import HandlerPatch
 
 UPPER_BOUND_VALUE = 9999
 
@@ -326,6 +328,12 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemp
 			print("END: {} preemptions".format(preemptionsNb))
 			break
 
+def make_legend_arrow(legend, orig_handle,
+                      xdescent, ydescent,
+                      width, height, fontsize):
+    p = mpatches.FancyArrow(0, 0.5*height, width, 0, length_includes_head=True, head_width=0.75*height )
+    return p
+
 def printGraph(tasksExecuted, arrivalJob, offsetList):
 	x = []
 	y = []
@@ -390,7 +398,7 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 	plt.xticks(np.arange(xlabels.max()+1), xlabels)
 	plt.xlabel("t")
 	plt.ylabel("Task number")
-	plt.legend([jobArrival,executionTime, deadline, firstJob,], ['Arrival of a new job',"Execution time","deadlines", "arrival of the first job"])
+	plt.legend([jobArrival,executionTime, deadline, firstJob,], ['Arrival of a new job',"Execution time","deadlines", "arrival of the first job"],handler_map={mpatches.FancyArrow : HandlerPatch(patch_func=make_legend_arrow),})
 	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
