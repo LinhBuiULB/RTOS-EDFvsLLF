@@ -62,19 +62,19 @@ def printFeasibilityInterval(feasibilityIntervalUpperBound):
 	"""
 	print("feasibility interval: 0 ," ,feasibilityIntervalUpperBound)
 
-def matchRequiredUtilisationProcent(wcets, periods, procent, delta):
+def matchRequiredUtilisationPercentage(wcets, periods, percentage, delta):
 	"""
-	Check whether or not we have our required utilisation procent with the values generated randomly
+	Check whether or not we have our required utilisation percentage with the values generated randomly
 	"""
 	result = 0
 	for i in range (0, len(wcets)):
 		result += wcets[i]/periods[i]
-	if ((procent - delta) <= result <= (procent + delta)):
+	if ((percentage - delta) <= result <= (percentage + delta)):
 		print("Utilization =",result)
 		return True
 	return False
 
-def generateTasks(numberOfTasks, requiredUtilisationProcent, delta):
+def generateTasks(numberOfTasks, requiredUtilisationPercentage, delta):
 	"""
 	Generator of tasks 
 	"""
@@ -83,14 +83,14 @@ def generateTasks(numberOfTasks, requiredUtilisationProcent, delta):
 		offsets.append(random.randint(0,2))
 
 	loop = True
-	while(loop):  #While we do not have our required utilisation procent
+	while(loop):  #While we do not have our required utilisation percentage
 		wcets = []
 		periods = []
 		for i in range (0, numberOfTasks):
 			wcets.append(random.randint(1,50))
 			periods.append(random.randint(1,50))
 
-		if matchRequiredUtilisationProcent(wcets, periods, requiredUtilisationProcent, delta):
+		if matchRequiredUtilisationPercentage(wcets, periods, requiredUtilisationPercentage, delta):
 			loop = False
 
 	return offsets, wcets, periods
@@ -392,6 +392,7 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 		countY += 1
 
 	executionTime = plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1, zorder = -1)
+	plt.grid(color='black', linestyle='dotted', linewidth=1)
 	plt.ylim(max(y)+0.5, min(y)-0.5)
 	plt.xlim(min(x), max(x)+2)
 	plt.yticks(np.arange(y.max()+1), ylabels)
@@ -430,9 +431,9 @@ def main(filename, scheduler, start, end):
 	# Testing tasks generator 
 	print("\n# QUESTION 2")
 	numberOfTasks = 6
-	requiredUtilisationProcent = 70
+	requiredUtilisationPercentage = 70
 	delta = 2 #Margin of error accepted
-	offsets, wcets, periods = generateTasks(numberOfTasks, requiredUtilisationProcent, delta)
+	offsets, wcets, periods = generateTasks(numberOfTasks, requiredUtilisationPercentage, delta)
 	systemFileGenerator(offsets, wcets, periods)
 
 	# Testing tasks generator 
@@ -450,4 +451,3 @@ if __name__ == "__main__":
 		start = int(sys.argv[3])
 		end = int(sys.argv[4])
 		main(filename, scheduler, start, end)
-	

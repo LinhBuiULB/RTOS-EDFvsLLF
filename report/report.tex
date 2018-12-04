@@ -1,0 +1,105 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[pdftex]{graphicx}
+\usepackage[left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[francais,english]{babel}
+\newcommand*{\escape}[1]{\texttt{\textbackslash#1}}
+\frenchbsetup{StandardLists=true}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{listings}
+
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{makecell}
+
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+
+
+\title{[INFO-F404] Real-Time Operating Systems \\ EDF vs LLF - Project report}
+\author{\bsc{BUI QUANG PHUONG} Linh - ULB ID : 000427796 \\ \bsc{PAQUET} Michael - ULB ID : 000410753 \\ \bsc{SINGH} Sundeep - ULB ID : 000428022 \\ MA1 Computer Sciences}
+\date{December 2018}
+
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+In this project, we study the difference between two scheduling algorithm on uniprocessors : EDF and LLF. On one side, the practical tools have to been set up such that creating a system generator, parsing information contained in the system file (i.e. periods, WCET and offsets). In the other hand, the main part consisting by implement the EDF and LLF algorithms has to be done based on the system file. 
+
+\section{Pseudo-code and implementation choices}
+
+\subsection{Code structure}
+The code is organized in four parts regrouping several functions:  
+\begin{itemize}
+    \item Parsing functions 
+    \item \textit{Question 1} - EDF feasibility interval computation 
+    \item \textit{Question 2} - System generator 
+    \item \textit{Question 3} - EDF and LLF implementation 
+\end{itemize}
+
+\subsubsection{Parsing functions}
+The parsing part contains all the functions required to parse the different values (offset, WCET and period) of the system's tasks. This will be useful to manipulate easily those values later.  
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont readFile(filename)} : reads a file and returns a list of the tasks and its corresponding offset, WCET and periods. 
+    \item {\fontfamily{lmtt}\selectfont getOffsetWCETPeriodLists(systemList)} : takes the list of tasks returned by the {\fontfamily{lmtt}\selectfont readFile} function and returns the offset list, the WCET list and the periods list regrouping all the offset/WCET/periods values of all tasks.
+\end{itemize}
+
+\subsubsection{EDF feasibility interval computation}
+In this part, a function is calculating the EDF feasibility interval while the other one is printing it in the good format as asked in the first question of the statement. Moreover, to compute the feasibility interval, we need to calculate the least common multiple which is done in the {\fontfamily{lmtt}\selectfont LCM} function. 
+
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont LCM(numbers)} : calculates the least common multiple of a list of numbers 
+    \item {\fontfamily{lmtt}\selectfont computeFeasibilityInterval(newSystemList)} : computes the feasibility interval following the formula :  $[0, max\{D_{i} | i = 1, … , n\}]$ such that $max(D_{i})$ is the greatest deadline value with $i$ the number of tasks.   
+    \item {\fontfamily{lmtt}\selectfont printFeasibilityInterval(feasibilityIntervalUpperBound)} : print the feasibility interval following the format : $[0, O_{max} + 2 \cdot P]$
+\end{itemize}
+
+\subsubsection{System generator}
+This section is dedicated to the generation of systems. To generate a system that satisfies the condition of the utilization percentage, we have first to verify this condition which is done in the {\fontfamily{lmtt}\selectfont matchRequiredUtilisationPercentage} function. Thus, we can easily generate the system file. Note that we arbitrary decided that the limit of the period/WCET value is 50 while that of the offset is 2. Moreover, for the utilisation percentage condition, we have introduced an error margin value which is represented by the parameter {\fontfamily{lmtt}\selectfont delta} in the following functions. In summary, we have : 
+
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont matchRequiredUtilisationPercentage(wcets, periods, percentage, delta)} :  checks whether or not we have our required utilization percentage with the values generated randomly
+    \item {\fontfamily{lmtt}\selectfont generateTasks(numberOfTasks, requiredUtilisationProcent, delta)} : generates the tasks by returning the offsets, wcet and periods values randomly generated   
+    \item {\fontfamily{lmtt}\selectfont printFeasibilityInterval(feasibilityIntervalUpperBound)} : writes the generated tasks in the {\fontfamily{lmtt}\selectfont tasks.txt} file
+\end{itemize}
+
+\subsubsection{EDF and LLF implementation}
+Before implementing EDF and LLF algorithms, the first thing to do is to get the different task's deadlines. To do that, we simply need to get the multiples of the period's value until the limit of the scheduling taking into account the potential offset. We then store those deadline values in a dictionary doing the link between the deadline and their corresponding tasks illustrated as followed, with $i$ the task number :
+$$ \{task_{i}:deadlines_{i}\} $$ 
+Furthermore, the most important point of those scheduling algorithms is to know which task is executed first. In the case of EDF, which means \textit{Earliest Deadline First}, we pick the lowest deadline at time $t$ as indicated by his name. Thus, we need a function which is doing this job, that's why {\fontfamily{lmtt}\selectfont getSmallestDeadlines} is present. In the case of LLF, which means \textit{Least Laxity First}, a new notion appears : the laxity. It's this new notion of laxity that will determinate the task to execute at time $t$. The laxity of a job $j$ is computable by the formula $$ l_{j}(t) = d - t - ( e - \epsilon_{j}(t)) $$  where $d$ is the task's deadline, $t$ the current time, $e$ the execution time (WCET) and $\epsilon_{j}(t)$ the cumulative CPU time used by $J$.
+
+To summarize, those functions are added to those previously presented to finally implement the EDF and LLF algorithms : 
+
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont getMultiplesOf(number, limit, offset)} :  computes the multiples of a number considering the offset until a certain limit. Here this number is the first deadline of a task and the multiples are the next deadlines. 
+\end{itemize}
+
+Finally, a clear command line or graphical output are available. This printing part is done in those two 
+following functions : 
+
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)} :  prints the scheduling in the command line 
+    \item {\fontfamily{lmtt}\selectfont printGraph(tasksExecuted)} : displays the graphical output of the scheduling   
+\end{itemize}
+
+\subsection{Pseudo-code EDF and LLF}
+
+\section{Difficulties encountered}
+
+\section{Graphical part library}
+
+\section{EDF vs LLF comparison}
+
+
+\end{document}
