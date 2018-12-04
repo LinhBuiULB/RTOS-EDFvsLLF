@@ -5,6 +5,7 @@ from math import gcd
 import matplotlib.pyplot as plt
 import numpy as np
 import string
+import pylab as P
 
 UPPER_BOUND_VALUE = 9999
 
@@ -44,28 +45,14 @@ def getOffsetWCETPeriodLists(systemList):
 	return offsetList, wcetList, periodList 
 
 def computeFeasibilityInterval(newSystemList):
-	"""
-	Printing the feasibility interval of a list of offset, WCET and periods values
-	from a system.txt file
-	""" 
-	offsetList = []
-	wcetList = []
-	periodList = []
+    """
+    Printing the feasibility interval of a list of offset, WCET and periods values
+    from a system.txt file
+    """ 
+    offsetList, wcetList, periodList = getOffsetWCETPeriodLists(newSystemList)
+    feasibilityIntervalUpperBound = max(offsetList) + (2*LCM(periodList))
 
-	for i in range(0,len(newSystemList)):
-		if(i==0):
-			offsetList.append([row[i] for row in newSystemList])
-		elif(i==1):
-			wcetList.append([row[i] for row in newSystemList])
-		else:
-			periodList.append([row[i] for row in newSystemList])
-	for i in range(0,len(periodList)):
-		periodList[i] = [int(i) for i in periodList[i]]
-		offsetList[i] = [int(i) for i in offsetList[i]]
-
-	feasibilityIntervalUpperBound = max(offsetList[0]) + (2*LCM(periodList[0]))
-
-	return feasibilityIntervalUpperBound
+    return feasibilityIntervalUpperBound
 
 def printFeasibilityInterval(feasibilityIntervalUpperBound):
 	"""
@@ -276,7 +263,7 @@ def EDF(system, begin, end):
 
 	tasksDeadlinesDict = getTasksDeadlines(systemList, computeFeasibilityInterval(systemList), offsetList)
 	tasksExecuted = []
-	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
+	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the current deadline 
 	arrivalJob = copy.deepcopy(tasksDeadlinesDict)
 	arrivalJobOutput = []
 	preemptionsNb = 0
@@ -318,7 +305,7 @@ def EDF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
-		printGraph(tasksExecuted)
+		printGraph(tasksExecuted, arrivalJob)
 
 def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb):
 	"""
@@ -340,36 +327,56 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemp
 			print("END: {} preemptions".format(preemptionsNb))
 			break
 
-def printGraph(tasksExecuted):
+def printGraph(tasksExecuted, arrivalJob):
 	x = []
 	y = []
+	xCircle = []
+	yCircle = [] 
+	plt.figure(figsize=(10,8)) 
+	
 
 	for i in range(len(tasksExecuted)):
 		if(tasksExecuted[i] != "Missed"):
 			y.append(tasksExecuted[i][0])
 			x.append(i)
 
+	
+	for i in range(len(arrivalJob)):
+		for deadlines in arrivalJob[i]:
+			yCircle.append(i)
+			xCircle.append(deadlines)
+
 	y = np.array(y)
 	x = np.array(x)		
+	xCircle = np.array(xCircle)
+	yCircle = np.array(yCircle)
+	plt.scatter(xCircle, yCircle, s=120, linewidth = 2,facecolors='none', edgecolors='red', zorder=1, label = "deadlines")
 
 	ylabels = []
 	xlabels = [] 
 
 	countX = 0 
-	for j in range(len(x)):
+	for j in range(len(x)+2):
 		xlabels.append(countX)
+		print(countX)
 		countX += 1 
-
+	
+	xlabels = np.array(xlabels)
+	
 	countY = 0 
 	for i in range(len(x)):
 		ylabels.append(countY)
 		countY += 1
 
-	plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1)
+	plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1, zorder = -1, label = "Execution time")
 	plt.ylim(max(y)+0.5, min(y)-0.5)
-	plt.xlim(min(x), max(x))
+	plt.xlim(min(x), max(x)+2)
 	plt.yticks(np.arange(y.max()+1), ylabels)
-	plt.xticks(np.arange(x.max()+1), xlabels)
+	plt.xticks(np.arange(xlabels.max()+1), xlabels)
+	plt.xlabel("t")
+	plt.ylabel("Task number")
+	plt.arrow(0.5,0.8,0.0,-0.2, fc="k", ec="k", head_width = 1, head_length = 0.1 )
+	plt.legend()
 	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
