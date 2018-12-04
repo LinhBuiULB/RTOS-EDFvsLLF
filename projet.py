@@ -195,6 +195,7 @@ def LLF(system, begin, end):
 	systemList = readFile(system)
 	jobs = initJobsList(systemList)
 	offsetList, wcetList, periodList = getOffsetWCETPeriodLists(systemList)
+	print("offsets",offsetList)
 	tasksDeadlinesDict = getTasksDeadlines(systemList, computeFeasibilityInterval(systemList), offsetList)
 	tasksExecuted = []
 	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the currrent deadline 
@@ -258,9 +259,7 @@ def EDF(system, begin, end):
 	"""
 	systemList = readFile(system)
 	jobs = initJobsList(systemList)
-
 	offsetList, wcetList, periodList = getOffsetWCETPeriodLists(systemList)
-
 	tasksDeadlinesDict = getTasksDeadlines(systemList, computeFeasibilityInterval(systemList), offsetList)
 	tasksExecuted = []
 	isJobDoneUntilNextDeadline = initIsJobDoneDict(systemList) # dict that allows us to get if the jobs are done for the current deadline 
@@ -305,7 +304,7 @@ def EDF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
-		printGraph(tasksExecuted, arrivalJob)
+		printGraph(tasksExecuted, arrivalJob, offsetList)
 
 def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb):
 	"""
@@ -327,30 +326,45 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemp
 			print("END: {} preemptions".format(preemptionsNb))
 			break
 
-def printGraph(tasksExecuted, arrivalJob):
+def printGraph(tasksExecuted, arrivalJob, offsetList):
 	x = []
 	y = []
 	xCircle = []
 	yCircle = [] 
-	plt.figure(figsize=(10,8)) 
+	plt.figure(figsize=(15,13)) 
 	
-
+	"""
+	create two arrays for the execution time to be plotted
+	"""
+	print("tasks;", tasksExecuted)
 	for i in range(len(tasksExecuted)):
 		if(tasksExecuted[i] != "Missed"):
 			y.append(tasksExecuted[i][0])
 			x.append(i)
+		else:
+			plt.text(i,tasksExecuted[i-1][0], "Job missed !",ha="center", va="center",bbox=dict(boxstyle="round",ec=(1., 0.5, 0.5),fc=(1., 0.8, 0.8),))
 
-	
+
+	"""
+	create two arrays for the deadlines to be plotted and draw the arrows corresponding to the arrival
+	"""
 	for i in range(len(arrivalJob)):
-		for deadlines in arrivalJob[i]:
+		for deadline in arrivalJob[i]:
 			yCircle.append(i)
-			xCircle.append(deadlines)
+			xCircle.append(deadline)
+			jobArrival  = plt.arrow(deadline,i-0.35,0,0.2, fc="k", ec="k", head_width = 0.5, head_length = 0.1)
+
+	"""
+	draw the first arrival of the job of each tasks
+	"""
+	for i in range(len(offsetList)):
+		firstJob =plt.arrow(offsetList[i]+0.05,i-0.35,0,0.2,fc="g", ec="g", head_width = 0.5, head_length = 0.1, linewidth = 2)
 
 	y = np.array(y)
 	x = np.array(x)		
 	xCircle = np.array(xCircle)
 	yCircle = np.array(yCircle)
-	plt.scatter(xCircle, yCircle, s=120, linewidth = 2,facecolors='none', edgecolors='red', zorder=1, label = "deadlines")
+	deadline = plt.scatter(xCircle, yCircle, s=120, linewidth = 2,facecolors='none', edgecolors='red', zorder=1)
 
 	ylabels = []
 	xlabels = [] 
@@ -368,15 +382,14 @@ def printGraph(tasksExecuted, arrivalJob):
 		ylabels.append(countY)
 		countY += 1
 
-	plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1, zorder = -1, label = "Execution time")
+	executionTime = plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1, zorder = -1)
 	plt.ylim(max(y)+0.5, min(y)-0.5)
 	plt.xlim(min(x), max(x)+2)
 	plt.yticks(np.arange(y.max()+1), ylabels)
 	plt.xticks(np.arange(xlabels.max()+1), xlabels)
 	plt.xlabel("t")
 	plt.ylabel("Task number")
-	plt.arrow(0.5,0.8,0.0,-0.2, fc="k", ec="k", head_width = 1, head_length = 0.1 )
-	plt.legend()
+	plt.legend([jobArrival,executionTime, deadline, firstJob,], ['Arrival of a new job',"Execution time","deadlines", "arrival of the first job"])
 	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
