@@ -339,6 +339,7 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 	print("tasks;", tasksExecuted)
 	for i in range(len(tasksExecuted)):
 		if(tasksExecuted[i] != "Missed"):
+			plt.text(i,tasksExecuted[i][0], str(tasksExecuted[i][1]), color = 'w', position =(i+0.5,tasksExecuted[i][0]))
 			y.append(tasksExecuted[i][0])
 			x.append(i)
 		else:
