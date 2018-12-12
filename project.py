@@ -392,7 +392,7 @@ def printGraph(tasksExecuted, arrivalJob, offsetList, begin):
 	y = []
 	xCircle = []
 	yCircle = [] 
-	plt.figure(figsize=(15,13)) 
+	plt.figure(figsize=(12,7)) 
 	
 	# Create two arrays for the execution time to be plotted
 	missed = 0
