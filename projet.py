@@ -96,14 +96,15 @@ def generateTasks(numberOfTasks, requiredUtilisationPercentage, delta):
 	return offsets, wcets, periods
 
 
-def systemFileGenerator(offsets, wcets, periods):
+def systemFileGenerator(offsets, wcets, periods,filename):
 	"""
 	Generator tasks in a file (question 2)
 	"""
-	file = open("tasks.txt", "w")
+	file = open(filename, "w")
 	for i in range(0, len(offsets)):
 		file.write(str(offsets[i]) + "; " + str(wcets[i]) + "; " + str(periods[i]) + "\n")
-	file.close
+	file.close()
+	print("Your file {} has been succesfully generated".format(filename))
 
 def getMultiplesOf(number, limit, offset):
 	"""
@@ -419,24 +420,6 @@ def getTaskInterval(tasksExecuted, task, index):
 
 def main(filename, scheduler, start, end):
 	newSystemList = readFile(filename)
-	print(newSystemList)
-	offsets, wcets, periods = getOffsetWCETPeriodLists(newSystemList)
-
-	print(getTasksDeadlines(newSystemList,25,[0,0,1]))
-	
-	# Testing feasibility interval print
-	print("\n")
-	print("# QUESTION 1")
-	feasibilityIntervalUpperBound = computeFeasibilityInterval(newSystemList)
-	printFeasibilityInterval(feasibilityIntervalUpperBound)
-
-	# Testing tasks generator 
-	print("\n# QUESTION 2")
-	numberOfTasks = 6
-	requiredUtilisationPercentage = 70
-	delta = 2 #Margin of error accepted
-	offsets, wcets, periods = generateTasks(numberOfTasks, requiredUtilisationPercentage, delta)
-	systemFileGenerator(offsets, wcets, periods)
 
 	# Testing tasks generator 
 	print("\n# QUESTION 3")
@@ -447,9 +430,53 @@ def main(filename, scheduler, start, end):
 
 if __name__ == "__main__":
 
-	if(len(sys.argv) == 5):
-		filename = sys.argv[1]
-		scheduler = sys.argv[2]
-		start = int(sys.argv[3])
-		end = int(sys.argv[4])
-		main(filename, scheduler, start, end)
+	if(len(sys.argv) == 3):
+		intervalType = sys.argv[1]
+		filename = sys.argv[2]
+		if(intervalType == "edf_interval"):
+			try:
+				newSystemList = readFile(filename)
+				feasibilityIntervalUpperBound = computeFeasibilityInterval(newSystemList)
+				printFeasibilityInterval(feasibilityIntervalUpperBound)
+			except IOError  as e:
+				print("can not open {}".format(filename))
+		else:
+			print("Error : argument(s) incorrect.")
+	elif(len(sys.argv) == 5):
+		firstArg = sys.argv[1]
+		secondArg = sys.argv[2]
+		thirdArg = sys.argv[3]
+		fourthArg = sys.argv[4]
+		if(firstArg == "gen"):
+			try:
+				numberOfTasks = int(secondArg)
+				requiredUtilisationPercentage = int(thirdArg)
+				delta = 2 #Margin of error accepted
+				offsets, wcets, periods = generateTasks(numberOfTasks, requiredUtilisationPercentage, delta)
+				systemFileGenerator(offsets, wcets, periods,fourthArg)
+			except ValueError as e:
+				print("Error : invalid value for the number of tasks or the pourcentage utilisation")
+		
+		elif(firstArg == "edf" or firstArg == "llf"):
+			try:
+				scheduler = sys.argv[1]
+				filename = sys.argv[2]
+				start = int(sys.argv[3])
+				end = int(sys.argv[4])
+				if(start < end):
+					main(filename, scheduler, start, end)
+				elif(start == end):
+					print("Error : the two values must be different")
+				else:
+					print("Error : the lower bound must be smaller than the upper bound")
+
+			except ValueError as e:
+				print("Error : invalid value for the bounds")
+		else:
+			print("Error : wrong arguments")
+	else:
+		if(len(sys.argv) > 5 ):
+			print("Error : too much arguments")
+
+		elif(len(sys.argv) != 3 and len(sys.argv) < 5 ):
+			print("Error : missing argument(s)")
