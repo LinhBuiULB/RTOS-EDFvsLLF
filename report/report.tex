@@ -13,10 +13,20 @@
 
 \usepackage{listings}
 
+%ALGORITHM
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\renewcommand{\algorithmicforall}{\textbf{for each}}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\func}[1]{\mathrm{#1}}
+\algdef{SE}[DOWHILE]{Do}{doWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}
+%
+
 \usepackage{caption}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 \usepackage{makecell}
+\newcommand{\algorithmautorefname}{Algorithm}
 
 \usepackage{graphicx}
 
@@ -79,10 +89,30 @@ Before implementing EDF and LLF algorithms, the first thing to do is to get the 
 $$ \{task_{i}:deadlines_{i}\} $$ 
 Furthermore, the most important point of those scheduling algorithms is to know which task is executed first. In the case of EDF, which means \textit{Earliest Deadline First}, we pick the lowest deadline at time $t$ as indicated by his name. Thus, we need a function which is doing this job, that's why {\fontfamily{lmtt}\selectfont getSmallestDeadlines} is present. In the case of LLF, which means \textit{Least Laxity First}, a new notion appears : the laxity. It's this new notion of laxity that will determinate the task to execute at time $t$. The laxity of a job $j$ is computable by the formula $$ l_{j}(t) = d - t - ( e - \epsilon_{j}(t)) $$  where $d$ is the task's deadline, $t$ the current time, $e$ the execution time (WCET) and $\epsilon_{j}(t)$ the cumulative CPU time used by $J$.
 
-To summarize, those functions are added to those previously presented to finally implement the EDF and LLF algorithms : 
-
+To summarize, those functions are added to those previously presented to finally implement the EDF and LLF algorithms, first, to get the deadlines : 
 \begin{itemize}
     \item {\fontfamily{lmtt}\selectfont getMultiplesOf(number, limit, offset)} :  computes the multiples of a number considering the offset until a certain limit. Here this number is the first deadline of a task and the multiples are the next deadlines. 
+    \item {\fontfamily{lmtt}\selectfont getTasksDeadlines(systemList, upperBound, offsets)} :  returns a dictionary linking the tasks of the system and all their respective deadlines
+\end{itemize}
+
+Now that we have all the deadlines, here are the two functions which compute the smallest deadline in case of EDF and the laxities in the case of LLF:
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont getSmallestDeadlines(tasksDeadlinesDict, isJobDoneUntilNextDeadline)} :  get the task with the smallest deadline value in the previous computed dictionary in {\fontfamily{lmtt}\selectfont getTasksDeadlines(\\systemList, upperBound, offsets)}. 
+    \item {\fontfamily{lmtt}\selectfont computeLaxities(time, tasksDeadlines, e, isJobDoneUntilNextDeadline, CPUTimeUsed)} : computes the laxity of all jobs to later get the smallest value to execute in the laxity list returned by this function. 
+\end{itemize}
+
+Moreover, some utility functions are created to make the code more clear such that initialization functions or conditions checking functions:
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont initJobsList(systemList)} :  initialiaze a dictionary with $i$ zero, where $i$ is the number of tasks. Those values are the current job number of the tasks, if the current job executed of the first task, then the value of the first key of the dictionary will be 1. 
+    \item {\fontfamily{lmtt}\selectfont initIsJobDoneDict(systemList)} : initialize a dictionary of $i$ boolean values indicating if the current job is done, where $i$ is the number of tasks
+    \item {\fontfamily{lmtt}\selectfont isSchedulable(systemList, end)} : check whether or not a system is schedulable depending of the feasibility interval 
+    \item {\fontfamily{lmtt}\selectfont isDeadlineMissed(deadline, t)} : check whether or not a deadline is missed, happens when a job is not fully executed before his deadline 
+\end{itemize}
+
+All the tools are now available to implement the EDF and LLF algorithms, \textbf{the pseudo-code of the two following functions are detailed in the next section}. 
+\begin{itemize}
+    \item {\fontfamily{lmtt}\selectfont EDF(system, begin, end)} : the "earliest deadline first" scheduling algorithm
+    \item {\fontfamily{lmtt}\selectfont LLF(system, begin, end)} : the "least laxity first" scheduling algorithm
 \end{itemize}
 
 Finally, a clear command line or graphical output are available. This printing part is done in those two 
@@ -93,13 +123,104 @@ following functions :
     \item {\fontfamily{lmtt}\selectfont printGraph(tasksExecuted)} : displays the graphical output of the scheduling   
 \end{itemize}
 
+\newpage
 \subsection{Pseudo-code EDF and LLF}
 
+Our implementation of the EDF scheduling algorithm is presented in the pseudo-code presented in \autoref{alg:edf} while the pseudo-code for LLF is presented in \autoref{alg:llf}. The difference of LFF compared to EDF are brought out in \textcolor{red}{red}. 
+
+\vspace{5cm}
+\begin{algorithm} 
+  \caption{EDF scheduling} \label{alg:edf}
+  \begin{algorithmic}[1]
+  \Procedure{EDF}{system, begin, end}
+  \State Parsing of the system file
+  \State Initialization of $tasksDeadlinesDict$ : the tasks deadlines dictionary, and $jobs$ : tasks jobs list 
+  \State Initialization of empty list $tasksExecuted$ which will contain the tasks executed over time $t$ \\
+  \If {schedulable} 
+  \Comment {end $\le$ upper bound of feasibility interval}
+  \While {the scheduling isn't finished}
+  \ForAll {deadline $i$}
+  \If {$i$ = currentTime $t$}
+  \State job arrival 
+  \EndIf 
+  \EndFor
+  \\
+  \State Assign the current executing task $j$ by taking the task whose the current job 
+  \State has the \textbf{smallest deadline} 
+  \\
+  \If{deadline missed}
+  \Comment {deadline of $job_{j}$ < $t$}
+  \State break the loop and add "miss" to $tasksExecuted$
+  \Else
+  \State Append $j$ to the list of task executed 
+  \State Decrements $WCET$ of $j$ by 1 
+  \State Compute preemption number
+  \If {current job of $j$ done}
+  \Comment {$WCET_{j}$ = 0}
+  \State Increment $jobs_{j}$ by 1 
+  \State Remove the deadline of $job_{j}$ from $tasksDeadlinesDict$ 
+  \EndIf
+  \EndIf
+  \EndWhile
+  \EndIf
+  \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+  \caption{LLF scheduling} \label{alg:llf}
+  \begin{algorithmic}[1]
+  \Procedure{LLF}{system, begin, end}
+  \State Parsing of the system file
+  \State Initialization of $tasksDeadlinesDict$ : the tasks deadlines dictionary, and $jobs$ : tasks jobs list 
+  \State Initialization of empty list $tasksExecuted$ which will contain the tasks executed over time $t$
+  \State \textcolor{red}{Initialization of empty list $laxityOfJobs$ which will contain the computed laxities for all jobs}
+  \\
+  \If {schedulable} 
+  \Comment {end $\le$ upper bound of feasibility interval}
+  \While {the scheduling isn't finished}
+  \ForAll {deadline $i$}
+  \If {$i$ = currentTime $t$}
+  \State job arrival 
+  \EndIf 
+  \EndFor
+  \State \textcolor{red}{Compute the laxity of jobs and put it in $laxityOfJobs$}
+  \\
+  \State Assign the current executing task $j$ by taking the task whose the current job 
+  \State has the \textcolor{red}{\textbf{smallest laxity}}  
+  \\
+  \If{deadline missed}
+  \Comment {\textcolor{red}{min(laxityOfJobs) < 0}}
+  \State break the loop and add "miss" to $tasksExecuted$
+  \Else
+  \State Append the current executing task $j$ to list of task executed 
+  \State Decrements $WCET$ of $j$ by 1 
+  \State Compute preemption number
+  \If {current job of $j$ done}
+  \Comment {$WCET_{j}$ = 0}
+  \State Increment $jobs_{j}$ by 1 
+  \State Remove the deadline of $job_{j}$ from $tasksDeadlinesDict$ 
+  \EndIf
+  \EndIf
+  \EndWhile
+  \EndIf
+  \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+
+
 \section{Difficulties encountered}
+No real difficulties were encountered. The main difficulties are generally related to the Graphical User Interface which was then problems with the corresponding library {\fontfamily{lmtt}\selectfont matplotlib}. To resolve this, we simply do some researches associated the problems encountered.
 
 \section{Graphical part library}
+To plot the outcome of the scheduling graphically, we used the library {\fontfamily{lmtt}\selectfont matplotlib} of {\fontfamily{lmtt}\selectfont Python}. No download is required. The only requirement is to installing the library in your computer using in the command line : 
+\begin{itemize}
+    \item in Windows : {\fontfamily{lmtt}\selectfont pip install matplotlib}
+    \item in Linux/MacOS : {\fontfamily{lmtt}\selectfont sudo apt-get build-dep python-matplotlib} 
+\end{itemize}
 
-\section{EDF vs LLF comparison}
+\section{EDF vs LLF : preemption comparison}
 
+The difference observed between the number of preemption for an EDF scheduling and an LLF scheduling is that LLF has quite more preemptions than EDF. This difference is explained by the dynamic of priority change for each case. Indeed, the priorities of EDF are dynamic at task level and fixed at job level while LLF is a job-level dynamic priority scheduler. Therefore, there are more priorities change in case of LLF than EDF, then more risks of preemption when scheduling LLF.
 
 \end{document}
