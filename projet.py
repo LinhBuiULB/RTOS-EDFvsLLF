@@ -252,7 +252,7 @@ def LLF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
-		printGraph(tasksExecuted)
+		printGraph(tasksExecuted,arrivalJob, offsetList, begin)
 
 
 def EDF(system, begin, end):
@@ -306,7 +306,7 @@ def EDF(system, begin, end):
 			t += 1
 
 		printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb)
-		printGraph(tasksExecuted, arrivalJob, offsetList)
+		printGraph(tasksExecuted, arrivalJob, offsetList, begin)
 
 def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemptionsNb):
 	"""
@@ -318,23 +318,24 @@ def printOutputs(tasksExecuted, arrivalJobOutput, begin, end, systemList, preemp
 		interval = getTaskInterval(tasksExecuted, tasksExecuted[i][0], i)
 		if(i >= begin):
 			print("{}-{} : T{}J{}".format(i, i+interval, tasksExecuted[i][0], tasksExecuted[i][1]))
+
 		for j in range(i+1, i+interval+1):
 			for elem in arrivalJobOutput:
 				if int(elem.split(":")[0]) == j:
-					print("{} : Arrival of job {}".format(j, elem.split(":")[1]))
+					if(tasksExecuted[j] != "Missed"):
+						print("{} : Arrival of job {}".format(j, elem.split(":")[1]))
 		i+=interval
 		if (tasksExecuted[i] == "Missed"):
 			print("{}: Job T{}J{} misses a deadline".format(i, tasksExecuted[-2][0], tasksExecuted[-2][1]))
 			print("END: {} preemptions".format(preemptionsNb))
 			break
 
-def make_legend_arrow(legend, orig_handle,
-                      xdescent, ydescent,
-                      width, height, fontsize):
+def make_legend_arrow(legend, orig_handle,xdescent, ydescent,width, height, fontsize):
     p = mpatches.FancyArrow(0, 0.5*height, width, 0, length_includes_head=True, head_width=0.75*height )
     return p
 
-def printGraph(tasksExecuted, arrivalJob, offsetList):
+def printGraph(tasksExecuted, arrivalJob, offsetList, begin):
+
 	x = []
 	y = []
 	xCircle = []
@@ -344,13 +345,14 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 	"""
 	create two arrays for the execution time to be plotted
 	"""
-	print("tasks;", tasksExecuted)
-	for i in range(len(tasksExecuted)):
+	missed = 0
+	for i in range(begin, len(tasksExecuted)):
 		if(tasksExecuted[i] != "Missed"):
 			plt.text(i,tasksExecuted[i][0], str(tasksExecuted[i][1]), color = 'w', position =(i+0.5,tasksExecuted[i][0]))
 			y.append(tasksExecuted[i][0])
 			x.append(i)
 		else:
+			missed += 1
 			plt.text(i,tasksExecuted[i-1][0], "Job missed !",ha="center", va="center",bbox=dict(boxstyle="round",ec=(1., 0.5, 0.5),fc=(1., 0.8, 0.8),))
 
 
@@ -378,10 +380,9 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 	ylabels = []
 	xlabels = [] 
 
-	countX = 0 
-	for j in range(len(x)+2):
+	countX = begin
+	for j in range(begin, len(x)+begin+missed):
 		xlabels.append(countX)
-		print(countX)
 		countX += 1 
 	
 	xlabels = np.array(xlabels)
@@ -394,12 +395,12 @@ def printGraph(tasksExecuted, arrivalJob, offsetList):
 	executionTime = plt.barh(y, [1]*len(x), left=x, color = 'blue', edgecolor = 'green', align='center', height=0.1, zorder = -1)
 	plt.grid(color='black', linestyle='dotted', linewidth=1)
 	plt.ylim(max(y)+0.5, min(y)-0.5)
-	plt.xlim(min(x), max(x)+2)
+	plt.xlim(min(x), max(x)+missed)
 	plt.yticks(np.arange(y.max()+1), ylabels)
-	plt.xticks(np.arange(xlabels.max()+1), xlabels)
+	plt.xticks(np.arange(begin,xlabels.max()+1), xlabels)
 	plt.xlabel("t")
 	plt.ylabel("Task number")
-	plt.legend([jobArrival,executionTime, deadline, firstJob,], ['Arrival of a new job',"Execution time","deadlines", "arrival of the first job"],handler_map={mpatches.FancyArrow : HandlerPatch(patch_func=make_legend_arrow),})
+	plt.legend([jobArrival,executionTime, deadline,firstJob,], ['Arrival of a new job',"Execution time","deadlines", "Arrival of the first job"],handler_map={mpatches.FancyArrow : HandlerPatch(patch_func=make_legend_arrow),})
 	plt.show()
 
 def getTaskInterval(tasksExecuted, task, index):
@@ -426,7 +427,8 @@ def main(filename, scheduler, start, end):
 	# Testing feasibility interval print
 	print("\n")
 	print("# QUESTION 1")
-	printFeasibilityInterval(newSystemList)
+	feasibilityIntervalUpperBound = computeFeasibilityInterval(newSystemList)
+	printFeasibilityInterval(feasibilityIntervalUpperBound)
 
 	# Testing tasks generator 
 	print("\n# QUESTION 2")
