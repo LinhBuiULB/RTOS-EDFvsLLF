@@ -69,6 +69,7 @@ def matchRequiredUtilisationPercentage(wcets, periods, percentage, delta):
 	result = 0
 	for i in range (0, len(wcets)):
 		result += wcets[i]/periods[i]
+	result = result * 100
 	if ((percentage - delta) <= result <= (percentage + delta)):
 		print("Utilization =",result)
 		return True
@@ -86,13 +87,20 @@ def generateTasks(numberOfTasks, requiredUtilisationPercentage, delta):
 	while(loop):  #While we do not have our required utilisation percentage
 		wcets = []
 		periods = []
-		for i in range (0, numberOfTasks):
-			wcets.append(random.randint(1,50))
-			periods.append(random.randint(1,50))
-
-		if matchRequiredUtilisationPercentage(wcets, periods, requiredUtilisationPercentage, delta):
-			loop = False
-
+		count = 0
+		while(count != numberOfTasks):
+			for i in range (0, numberOfTasks):
+				tempWcet = random.randint(1,50)
+				tempPeriod = random.randint(1,50)
+				if(tempWcet < tempPeriod):
+					wcets.append(tempWcet)
+					periods.append(tempPeriod)
+					count = count + 1
+					if(count == numberOfTasks):
+						break
+			if matchRequiredUtilisationPercentage(wcets, periods, requiredUtilisationPercentage, delta):
+				loop = False
+	print(offsets, wcets, periods)
 	return offsets, wcets, periods
 
 
